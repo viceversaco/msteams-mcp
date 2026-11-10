@@ -15,7 +15,7 @@ import {
   type SessionState,
 } from './session-store.js';
 import { parseJwtProfile, type UserProfile } from '../utils/parsers.js';
-import { MRI_TYPE_PREFIX, ORGID_PREFIX, MRI_ORGID_PREFIX, ASSIGNMENTS_APP_ID, GRAPH_AUDIENCES } from '../constants.js';
+import { MRI_TYPE_PREFIX, ORGID_PREFIX, MRI_ORGID_PREFIX, ASSIGNMENTS_APP_ID, GRAPH_AUDIENCES, SUBSTRATE_AUDIENCE } from '../constants.js';
 
 // ============================================================================
 // JWT Utilities
@@ -118,9 +118,16 @@ function bestJwt(
  *   - substrate.office.com/search/SubstrateSearch (old)
  *   - substrate.office.com/SubstrateSearch-Internal.ReadWrite (new)
  *   - outlook.office.com/search/SubstrateSearch-Internal.ReadWrite (some Enterprise tenants)
+ *
+ * A token with audience https://substrate.office.com is preferred. After a
+ * browser login the Teams client's own outlook-audience token usually outlives
+ * it; search accepts both, but WorkingSetFiles (transcripts) rejects the
+ * outlook one with 401.
  */
 export function extractSubstrateToken(state?: SessionState): SubstrateTokenInfo | null {
-  return bestJwt(state, entry => entry.target?.includes('SubstrateSearch') ?? false);
+  const isSearch = (entry: { target?: string }) => entry.target?.includes('SubstrateSearch') ?? false;
+  return bestJwt(state, (entry, payload) => isSearch(entry) && payload.aud === SUBSTRATE_AUDIENCE)
+    ?? bestJwt(state, isSearch);
 }
 
 // ============================================================================
