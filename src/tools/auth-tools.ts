@@ -48,7 +48,7 @@ const loginToolDefinition: Tool = {
     properties: {
       forceNew: {
         type: 'boolean',
-        description: 'Delete all previous login data (browser profile, cookies, saved session, every previously signed-in account) and sign in from scratch in a visible browser. Use to switch accounts or recover a broken session (default: false)',
+        description: 'Delete all previous login data (browser profile, cookies, saved session, every previously signed-in account) and sign in from scratch in a visible browser. Only for switching accounts: it signs out every client that shares this machine\'s session, and an expired session recovers with a plain teams_login (default: false)',
       },
     },
   },
