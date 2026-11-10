@@ -5,6 +5,8 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     include: ['src/**/*.test.ts'],
+    // Upstream's tests exercise write tools; read-only.test.ts covers the default.
+    env: { MSTEAMS_ALLOW_WRITES: '1' },
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],
