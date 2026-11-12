@@ -49,6 +49,21 @@ describe('findMeetingRecording', () => {
     expect(result.ok && result.value.recording?.url).toBe(clip.webUrl);
   });
 
+  it('stops when the listing repeats a page token', async () => {
+    vi.mocked(getSharedFiles).mockResolvedValue(ok({ files: [early], skipToken: 'again' } as never));
+    const result = await findMeetingRecording('19:meeting_x@thread.v2');
+    expect(result.ok).toBe(false);
+    expect(vi.mocked(getSharedFiles)).toHaveBeenCalledTimes(2);
+  });
+
+  it('stops after a bounded number of pages', async () => {
+    let n = 0;
+    vi.mocked(getSharedFiles).mockImplementation(async () => ok({ files: [], skipToken: `p${++n}` } as never));
+    const result = await findMeetingRecording('19:meeting_x@thread.v2');
+    expect(result.ok).toBe(false);
+    expect(n).toBe(50);
+  });
+
   it('returns null with the shared names when there is no .mp4', async () => {
     pages([{ itemType: 'File', fileName: 'notes.docx', webUrl: `${SP}/notes.docx` }]);
     const result = await findMeetingRecording('19:meeting_x@thread.v2');
@@ -70,6 +85,12 @@ describe('getRecordingInfo', () => {
       sharedBy: 'Owner', created: '2026-01-12T17:00:00Z', blocksDownload: true, candidates: undefined,
     });
     expect(vi.mocked(httpRequest).mock.calls[0][0]).toMatch(/^https:\/\/graph\.microsoft\.com\/v1\.0\/shares\/u!/);
+  });
+
+  it('reports blocksDownload null when Graph omits currentUserRole', async () => {
+    vi.mocked(httpRequest).mockResolvedValue(ok({ status: 200, headers: new Headers(), data: { name: 'r.mp4', size: 10 } }));
+    const result = await getRecordingInfo(`${SP}/r.mp4`);
+    expect(result.ok && result.value.blocksDownload).toBeNull();
   });
 
   it('never sends the Graph token to a non-SharePoint URL', async () => {

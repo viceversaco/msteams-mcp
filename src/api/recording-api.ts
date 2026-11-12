@@ -14,6 +14,9 @@ import { requireGraphTokenAsync } from '../utils/auth-guards.js';
 import { type Result, ok, err } from '../types/result.js';
 import { ErrorCode, createError } from '../types/errors.js';
 
+/** Listing pages read before giving up on a chat whose paging never ends. */
+const MAX_LISTING_PAGES = 50;
+
 export interface RecordingCandidate {
   fileName?: string;
   sharedTime?: string;
@@ -43,7 +46,8 @@ export interface RecordingInfo {
   height?: number;
   sharedBy?: string;
   created?: string;
-  blocksDownload: boolean;
+  /** null when Graph does not say; treat that as blocked. */
+  blocksDownload: boolean | null;
   /** Present when the chat shares more than one candidate. */
   candidates?: RecordingCandidate[];
 }
@@ -64,12 +68,20 @@ interface RawRecordingItem {
  */
 export async function findMeetingRecording(threadId: string, date?: string): Promise<Result<RecordingSearch>> {
   const files: SharedFile[] = [];
+  const seen = new Set<string>();
   let skipToken: string | undefined;
   do {
+    if (seen.size >= MAX_LISTING_PAGES) {
+      return err(createError(ErrorCode.API_ERROR, `The chat's file listing did not end after ${MAX_LISTING_PAGES} pages`, { retryable: false }));
+    }
     const page = await getSharedFiles(threadId, { pageSize: 100, skipToken });
     if (!page.ok) return page;
     files.push(...page.value.files);
     skipToken = page.value.skipToken;
+    if (skipToken && seen.has(skipToken)) {
+      return err(createError(ErrorCode.API_ERROR, "The chat's file listing repeated a page token", { retryable: false }));
+    }
+    if (skipToken) seen.add(skipToken);
   } while (skipToken);
 
   const videos = files.filter(f => f.itemType === 'File' && /\.mp4$/i.test(f.fileName ?? '') && f.webUrl);
@@ -118,7 +130,7 @@ export async function getRecordingInfo(url: string, located?: LocatedRecording):
     height: item.video?.height,
     sharedBy: located?.sharedBy,
     created: item.createdDateTime,
-    blocksDownload: item.currentUserRole?.blocksDownload ?? false,
+    blocksDownload: item.currentUserRole?.blocksDownload ?? null,
     candidates: candidates.length > 1 ? candidates : undefined,
   });
 }

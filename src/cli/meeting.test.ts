@@ -13,7 +13,7 @@ vi.mock('../api/graph-files-api.js', () => ({ downloadFile: vi.fn() }));
 const THREAD = '19:meeting_x@thread.v2';
 const URL_ = 'https://contoso-my.sharepoint.com/personal/o/Documents/Recordings/r.mp4';
 
-function info(blocksDownload: boolean): RecordingInfo {
+function info(blocksDownload: boolean | null): RecordingInfo {
   return { name: 'r.mp4', webUrl: URL_, size: 10, blocksDownload };
 }
 function located() {
@@ -75,9 +75,16 @@ describe('recording', () => {
     expect(out).toMatchObject({ ok: true, outputPath: '/tmp/x/r.mp4', sha256: 'h' });
   });
 
-  it('requires --out to download', async () => {
-    vi.mocked(getRecordingInfo).mockResolvedValue(ok(info(false)));
+  it('requires --out to download, before any network call', async () => {
     expect((await runMeetingCommand(['recording', URL_])).code).toBe(2);
+    expect(getRecordingInfo).not.toHaveBeenCalled();
+  });
+
+  it('exits 4 and writes nothing when Graph does not report the download right', async () => {
+    vi.mocked(getRecordingInfo).mockResolvedValue(ok({ ...info(false), blocksDownload: null }));
+    const { code } = await runMeetingCommand(['recording', URL_, '--out', '/tmp/x']);
+    expect(code).toBe(4);
+    expect(downloadFile).not.toHaveBeenCalled();
   });
 });
 
@@ -89,7 +96,14 @@ describe('usage', () => {
     [['transcript', THREAD, 'date', 'extra']],
     [['recording', THREAD, '--date']],
     [['recording', THREAD, '--force']],
-  ])('exits 2 for %j', async argv => {
+    [['transcript', THREAD, 'not-a-date']],
+    [['recording', THREAD, '--info', '--date', 'soon']],
+    [['recording', THREAD, '--out', '--info']],
+    [['recording', THREAD, '--out', 'relative/dir']],
+  ])('exits 2 for %j before any network call', async argv => {
     expect((await runMeetingCommand(argv)).code).toBe(2);
+    expect(getTranscriptContent).not.toHaveBeenCalled();
+    expect(findMeetingRecording).not.toHaveBeenCalled();
+    expect(getRecordingInfo).not.toHaveBeenCalled();
   });
 });

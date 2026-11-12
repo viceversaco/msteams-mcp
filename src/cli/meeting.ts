@@ -11,7 +11,7 @@
  * chat, 4 the owner blocks download (nothing written).
  */
 
-import { join } from 'node:path';
+import { isAbsolute, join } from 'node:path';
 import { getTranscriptContent } from '../api/transcript-api.js';
 import { findMeetingRecording, getRecordingInfo, type LocatedRecording } from '../api/recording-api.js';
 import { downloadFile } from '../api/graph-files-api.js';
@@ -51,13 +51,15 @@ async function recording(target: string, opts: { date?: string; info: boolean; o
   const info = await getRecordingInfo(url, located);
   if (!info.ok) throw new Fail(1, info.error.message, { code: info.error.code, url });
   if (opts.info) return { ...info.value };
+  if (info.value.blocksDownload === null) {
+    throw new Fail(4, 'Graph did not report whether you may download this recording, so it was not downloaded.', { ...info.value });
+  }
   if (info.value.blocksDownload) {
     throw new Fail(4, 'The owner has blocked downloading this recording for you (view-only). Ask the owner to allow download, or download it by hand in the browser.', { ...info.value });
   }
-  if (!opts.out) throw new Fail(2, '--out <absolute directory> is required to download');
   if (!info.value.name) throw new Fail(1, 'Graph returned no file name for this recording', { ...info.value });
 
-  const saved = await downloadFile(url, join(opts.out, info.value.name));
+  const saved = await downloadFile(url, join(opts.out!, info.value.name));
   if (!saved.ok) throw new Fail(1, saved.error.message, { code: saved.error.code, ...info.value });
   return { ...info.value, ...saved.value };
 }
@@ -80,6 +82,11 @@ async function dispatch(argv: string[]): Promise<Record<string, unknown>> {
     }
   }
   if (!target || target.startsWith('-')) throw new Fail(2, USAGE);
+  if (opts.date !== undefined && Number.isNaN(Date.parse(opts.date))) throw new Fail(2, `not a date: ${opts.date}`);
+  if (command === 'recording' && !opts.info) {
+    if (!opts.out) throw new Fail(2, 'recording needs --info, or --out <absolute directory> to download');
+    if (opts.out.startsWith('-') || !isAbsolute(opts.out)) throw new Fail(2, `--out must be an absolute directory: ${opts.out}`);
+  }
   if (command === 'transcript') return transcript(target, opts.date);
   if (command === 'recording') return recording(target, opts);
   throw new Fail(2, `unknown command: ${command ?? ''}. ${USAGE}`);
