@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { getToolDefinitions, getTool, hasTool, invokeTool } from './registry.js';
-import { READ_TOOLS, WRITE_TOOLS } from './read-only.js';
+import { getToolDefinitions, getTool, hasTool, invokeTool, toolCategories } from './registry.js';
+import { READ_TOOLS, WRITE_TOOLS, refusalReason } from './read-only.js';
 
 function registeredNames(): string[] {
   vi.stubEnv('MSTEAMS_ALLOW_WRITES', '1');
@@ -16,6 +16,17 @@ describe('read-only classification', () => {
   it('classifies every registered tool exactly once', () => {
     const unclassified = registeredNames().filter(name => READ_TOOLS.has(name) === WRITE_TOOLS.has(name));
     expect(unclassified).toEqual([]);
+  });
+});
+
+describe('read-only schemas', () => {
+  // A parameter upstream adds to a read tool can write (markRead did). Review
+  // any change here before updating the snapshot.
+  it('lists the reviewed parameters for every read tool', () => {
+    const params = Object.fromEntries(getToolDefinitions()
+      .map(tool => [tool.name, Object.keys(tool.inputSchema.properties ?? {}).sort()])
+      .sort(([a], [b]) => String(a).localeCompare(String(b))));
+    expect(params).toMatchSnapshot();
   });
 });
 
@@ -51,7 +62,15 @@ describe('MSTEAMS_ALLOW_WRITES=1', () => {
   it('restores every tool and the markRead parameter', () => {
     vi.stubEnv('MSTEAMS_ALLOW_WRITES', '1');
     const listed = getToolDefinitions();
-    expect(listed.map(tool => tool.name)).toContain('teams_send_message');
+    expect(listed.map(tool => tool.name).sort()).toEqual(toolCategories.flatMap(group => group.tools).sort());
     expect(listed.find(tool => tool.name === 'teams_get_thread')?.inputSchema.properties).toHaveProperty('markRead');
+    expect(refusalReason('teams_send_message', {})).toBeNull();
+  });
+});
+
+describe('write parameters', () => {
+  it('allows markRead: false and refuses only a truthy value', () => {
+    expect(refusalReason('teams_get_thread', { conversationId: 'x', markRead: false })).toBeNull();
+    expect(refusalReason('teams_get_thread', { conversationId: 'x', markRead: true })).not.toBeNull();
   });
 });
