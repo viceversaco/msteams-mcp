@@ -11,7 +11,7 @@
 import { httpRequest } from '../utils/http.js';
 import { type Result, ok, err } from '../types/result.js';
 import { ErrorCode, createError } from '../types/errors.js';
-import { requireMessageAuth, requireSubstrateTokenAsync } from '../utils/auth-guards.js';
+import { handleSubstrateError, requireMessageAuth, requireSubstrateTokenAsync } from '../utils/auth-guards.js';
 import { formatTranscriptText, parseVttTranscript, type TranscriptEntry } from '../utils/parsers.js';
 import { getThreadMessages } from './chatsvc-messaging.js';
 import { MAX_THREAD_LIMIT } from '../constants.js';
@@ -109,7 +109,7 @@ export async function getTranscriptContent(
   );
 
   if (!response.ok) {
-    return response;
+    return handleSubstrateError(response);
   }
 
   const data = response.value.data;

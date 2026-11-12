@@ -253,6 +253,9 @@ export const ASSIGNMENTS_APP_ID = '8f348934-64be-4bb2-bc16-c54c96789f43';
 /** Microsoft Graph token audiences: MSAL caches either the URL or the app ID. */
 export const GRAPH_AUDIENCES: readonly string[] = ['https://graph.microsoft.com', '00000003-0000-0000-c000-000000000000'];
 
+/** Audience of the Substrate token that every Substrate endpoint accepts. */
+export const SUBSTRATE_AUDIENCE = 'https://substrate.office.com';
+
 /**
  * Teams web hosts, in the order a session's origins should be preferred.
  *
