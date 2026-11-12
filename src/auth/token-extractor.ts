@@ -136,15 +136,19 @@ export function extractSubstrateToken(state?: SessionState): SubstrateTokenInfo 
 
 /**
  * Gets a valid Substrate token, either from cache or by extracting from session.
+ * A cached token without the substrate audience is replaced as soon as the
+ * session holds one that has it.
  */
 export function getValidSubstrateToken(): string | null {
   const cache = readTokenCache();
-  if (cache && cache.substrateTokenExpiry > Date.now()) {
-    return cache.substrateToken;
+  const cached = cache && cache.substrateTokenExpiry > Date.now() ? cache.substrateToken : null;
+  if (cached && decodeJwtPayload(cached)?.aud === SUBSTRATE_AUDIENCE) {
+    return cached;
   }
 
   const extracted = extractSubstrateToken();
-  if (!extracted) return null;
+  if (!extracted) return cached;
+  if (extracted.token === cached) return cached;
 
   writeTokenCache({
     substrateToken: extracted.token,
