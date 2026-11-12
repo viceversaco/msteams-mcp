@@ -71,20 +71,28 @@ export function createError(
 }
 
 /**
+ * What to do when a plain teams_login does not restore the session. forceNew
+ * deletes the saved sign-in that every client on the machine shares, so it is
+ * never the recovery for an expired session.
+ */
+export const LOGIN_FAILED_SUGGESTION =
+  'If the session is still not authenticated, ask the user to sign in to Teams in the login browser window. Do NOT use forceNew: it deletes all saved sign-in data and is only for switching accounts';
+
+/**
  * Returns default suggestions for each error code.
  */
 function getDefaultSuggestions(code: ErrorCode): string[] {
   switch (code) {
     case ErrorCode.AUTH_REQUIRED:
       return [
-        'IMMEDIATELY call teams_login with { "forceNew": true } to authenticate',
-        'Do NOT skip this step or tell the user Teams is unavailable',
+        'Call teams_login once, without forceNew, to authenticate',
+        LOGIN_FAILED_SUGGESTION,
         'After login succeeds, retry the original request',
       ];
     case ErrorCode.AUTH_EXPIRED:
       return [
-        'IMMEDIATELY call teams_login with { "forceNew": true } to refresh authentication',
-        'Do NOT skip this step or tell the user Teams is unavailable',
+        'Call teams_login once, without forceNew, to refresh authentication',
+        LOGIN_FAILED_SUGGESTION,
         'After login succeeds, retry the original request',
       ];
     case ErrorCode.RATE_LIMITED:

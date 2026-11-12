@@ -36,7 +36,7 @@ import { getFavorites } from './api/csa-api.js';
 import { getToolDefinitions, invokeTool } from './tools/registry.js';
 
 // Types
-import { ErrorCode, createError, type McpError } from './types/errors.js';
+import { ErrorCode, createError, LOGIN_FAILED_SUGGESTION, type McpError } from './types/errors.js';
 import * as log from './utils/logger.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -249,15 +249,15 @@ export class TeamsServer {
             return this.formatError(retryResult.error);
           }
 
-          // Auto-login failed — return a strongly-worded error directing to forceNew
+          // Auto-login failed: one plain login, then the user signs in; never forceNew
           log.error('auto-login', 'Automatic re-authentication failed.');
           return this.formatError(createError(
             ErrorCode.AUTH_REQUIRED,
-            'ACTION REQUIRED: Teams session has expired and automatic re-authentication failed. You MUST call teams_login with forceNew: true to clear stale state and re-authenticate. Do NOT call teams_login without forceNew — it will return early without fixing the problem.',
+            'ACTION REQUIRED: Teams session has expired and automatic re-authentication failed. Call teams_login once without forceNew. If the session is still expired, the user has to sign in to Teams in the login browser window.',
             { suggestions: [
-              'IMMEDIATELY call teams_login with { "forceNew": true }',
+              'Call teams_login once, without forceNew',
+              LOGIN_FAILED_SUGGESTION,
               'After login succeeds, retry the original request',
-              'Do NOT skip this step or tell the user Teams is unavailable — authentication just needs refreshing',
             ] }
           ));
         }
