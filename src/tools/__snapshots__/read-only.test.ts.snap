@@ -1,0 +1,108 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`read-only schemas > lists the reviewed parameters for every read tool 1`] = `
+{
+  "teams_find_channel": [
+    "limit",
+    "query",
+  ],
+  "teams_get_activity": [
+    "limit",
+    "syncState",
+  ],
+  "teams_get_assignment": [
+    "assignmentId",
+    "classId",
+  ],
+  "teams_get_chat": [
+    "userId",
+  ],
+  "teams_get_favorites": [],
+  "teams_get_followed_threads": [
+    "limit",
+  ],
+  "teams_get_frequent_contacts": [
+    "limit",
+  ],
+  "teams_get_me": [],
+  "teams_get_meetings": [
+    "endDate",
+    "limit",
+    "startDate",
+  ],
+  "teams_get_message": [
+    "conversationId",
+    "messageId",
+  ],
+  "teams_get_person": [
+    "mris",
+  ],
+  "teams_get_saved_messages": [
+    "limit",
+  ],
+  "teams_get_shared_files": [
+    "conversationId",
+    "pageSize",
+    "skipToken",
+  ],
+  "teams_get_tags": [
+    "query",
+    "teamId",
+  ],
+  "teams_get_thread": [
+    "conversationId",
+    "cursor",
+    "fromUrl",
+    "limit",
+    "order",
+    "since",
+    "threadRootId",
+  ],
+  "teams_get_transcript": [
+    "meetingDate",
+    "threadId",
+  ],
+  "teams_get_unread": [
+    "conversationId",
+  ],
+  "teams_list_assignments": [
+    "nextLink",
+    "statusFilter",
+    "top",
+  ],
+  "teams_list_chats": [
+    "limit",
+  ],
+  "teams_login": [
+    "forceNew",
+  ],
+  "teams_search": [
+    "from",
+    "maxResults",
+    "query",
+    "size",
+  ],
+  "teams_search_email": [
+    "from",
+    "maxResults",
+    "query",
+    "size",
+  ],
+  "teams_search_emoji": [
+    "query",
+  ],
+  "teams_search_people": [
+    "limit",
+    "query",
+  ],
+  "teams_status": [],
+  "teams_wait_for_reply": [
+    "after",
+    "conversationId",
+    "fromUrl",
+    "includeSelf",
+    "intervalSeconds",
+    "maxWaitSeconds",
+  ],
+}
+`;

@@ -8,6 +8,7 @@ import type { Tool } from '@modelcontextprotocol/sdk/types.js';
 import type { z } from 'zod';
 import type { ToolResult } from './index.js';
 import { ErrorCode, createError } from '../types/errors.js';
+import { isToolAllowed, exposedDefinition, refusalReason } from './read-only.js';
 
 /** Type-erased tool entry for the registry — avoids generic variance issues. */
 interface RegistryEntry {
@@ -67,14 +68,16 @@ const toolsByName = new Map<string, RegistryEntry>(
  * Gets all tool definitions for MCP ListTools.
  */
 export function getToolDefinitions(): Tool[] {
-  return allTools.map(tool => tool.definition);
+  return allTools
+    .filter(tool => isToolAllowed(tool.definition.name))
+    .map(tool => exposedDefinition(tool.definition));
 }
 
 /**
  * Gets a tool by name.
  */
 export function getTool(name: string): RegistryEntry | undefined {
-  return toolsByName.get(name);
+  return isToolAllowed(name) ? toolsByName.get(name) : undefined;
 }
 
 /**
@@ -82,11 +85,19 @@ export function getTool(name: string): RegistryEntry | undefined {
  */
 export async function invokeTool(name: string, args: unknown): Promise<ToolResult> {
   const tool = toolsByName.get(name);
-  
+
   if (!tool) {
     return {
       success: false,
       error: createError(ErrorCode.INVALID_INPUT, `Unknown tool: ${name}`, { retryable: false }),
+    };
+  }
+
+  const refused = refusalReason(name, args);
+  if (refused) {
+    return {
+      success: false,
+      error: createError(ErrorCode.ACCESS_DENIED, refused, { retryable: false }),
     };
   }
 
@@ -107,5 +118,5 @@ export async function invokeTool(name: string, args: unknown): Promise<ToolResul
  * Checks if a tool exists.
  */
 export function hasTool(name: string): boolean {
-  return toolsByName.has(name);
+  return isToolAllowed(name) && toolsByName.has(name);
 }
