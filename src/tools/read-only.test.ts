@@ -1,6 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getToolDefinitions, getTool, hasTool, invokeTool, toolCategories } from './registry.js';
 import { READ_TOOLS, WRITE_TOOLS, refusalReason } from './read-only.js';
+import { clearAllLocalData } from '../auth/session-store.js';
+
+// teams_login forceNew wipes the shared sign-in and opens a browser. If the
+// guard regresses, the forceNew tests must fail without doing either.
+vi.mock('../auth/session-store.js', async importOriginal => ({
+  ...(await importOriginal<typeof import('../auth/session-store.js')>()),
+  clearAllLocalData: vi.fn(),
+}));
+vi.mock('../browser/context.js', async importOriginal => ({
+  ...(await importOriginal<typeof import('../browser/context.js')>()),
+  createBrowserContext: vi.fn(() => Promise.reject(new Error('no browser in tests'))),
+}));
 
 function registeredNames(): string[] {
   vi.stubEnv('MSTEAMS_ALLOW_WRITES', '1');
@@ -83,6 +95,7 @@ describe('teams_login forceNew', () => {
     const result = await invokeTool('teams_login', { forceNew: true });
     expect(result.success).toBe(false);
     if (!result.success) expect(result.error.code).toBe('ACCESS_DENIED');
+    expect(clearAllLocalData).not.toHaveBeenCalled();
     expect(refusalReason('teams_login', { forceNew: false })).toBeNull();
   });
 
