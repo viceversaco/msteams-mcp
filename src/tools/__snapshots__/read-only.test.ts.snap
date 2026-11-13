@@ -73,9 +73,7 @@ exports[`read-only schemas > lists the reviewed parameters for every read tool 1
   "teams_list_chats": [
     "limit",
   ],
-  "teams_login": [
-    "forceNew",
-  ],
+  "teams_login": [],
   "teams_search": [
     "from",
     "maxResults",
