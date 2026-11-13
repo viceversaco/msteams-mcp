@@ -46,7 +46,7 @@ export interface RecordingInfo {
   height?: number;
   sharedBy?: string;
   created?: string;
-  /** null when Graph does not say; treat that as blocked. */
+  /** null when Graph does not say; SharePoint then decides at download. */
   blocksDownload: boolean | null;
   /** Present when the chat shares more than one candidate. */
   candidates?: RecordingCandidate[];
