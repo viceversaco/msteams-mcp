@@ -4,7 +4,9 @@
  * Only tools in READ_TOOLS are listed or callable. MSTEAMS_ALLOW_WRITES=1
  * restores upstream behaviour: every tool, including unclassified ones.
  * Parameters of read tools that write are stripped from the listed schema and
- * refused on call while writes are off.
+ * refused on call until their variable is set. teams_login's forceNew deletes
+ * the sign-in every client on the machine shares, so it has its own variable
+ * for the one legitimate use, switching accounts.
  *
  * read-only.test.ts fails when a registered tool is in neither set, so a tool
  * added upstream stays hidden and blocks the build until it is classified.
@@ -58,24 +60,27 @@ export const WRITE_TOOLS: ReadonlySet<string> = new Set([
   'teams_download_file',
 ]);
 
-const WRITE_PARAMS: Record<string, string[]> = {
-  teams_get_thread: ['markRead'],
+const GUARDED_PARAMS: Record<string, Array<{ param: string; env: string }>> = {
+  teams_get_thread: [{ param: 'markRead', env: 'MSTEAMS_ALLOW_WRITES' }],
+  teams_login: [{ param: 'forceNew', env: 'MSTEAMS_ALLOW_FORCE_LOGIN' }],
 };
 
 export function writesEnabled(): boolean {
   return process.env.MSTEAMS_ALLOW_WRITES === '1';
 }
 
+const unlocked = (env: string) => writesEnabled() || process.env[env] === '1';
+
 export function isToolAllowed(name: string): boolean {
   return writesEnabled() || READ_TOOLS.has(name);
 }
 
-/** The definition as listed: write parameters removed while writes are off. */
+/** The definition as listed: guarded parameters removed while locked. */
 export function exposedDefinition(definition: Tool): Tool {
-  const params = WRITE_PARAMS[definition.name];
-  if (!params || writesEnabled()) return definition;
+  const locked = (GUARDED_PARAMS[definition.name] ?? []).filter(guard => !unlocked(guard.env));
+  if (locked.length === 0) return definition;
   const properties = { ...(definition.inputSchema.properties ?? {}) };
-  for (const param of params) delete properties[param];
+  for (const guard of locked) delete properties[guard.param];
   return { ...definition, inputSchema: { ...definition.inputSchema, properties } };
 }
 
@@ -86,6 +91,6 @@ export function refusalReason(name: string, args: unknown): string | null {
     return `${name} is disabled: this build is read-only (MSTEAMS_ALLOW_WRITES=1 enables write tools).`;
   }
   const values = (args ?? {}) as Record<string, unknown>;
-  const used = (WRITE_PARAMS[name] ?? []).find(param => values[param]);
-  return used ? `${name} ${used} is disabled: this build is read-only (MSTEAMS_ALLOW_WRITES=1 enables it).` : null;
+  const used = (GUARDED_PARAMS[name] ?? []).find(guard => values[guard.param] && !unlocked(guard.env));
+  return used ? `${name} ${used.param} is disabled in this build (${used.env}=1 enables it).` : null;
 }
