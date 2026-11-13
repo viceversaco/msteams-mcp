@@ -80,11 +80,12 @@ describe('recording', () => {
     expect(getRecordingInfo).not.toHaveBeenCalled();
   });
 
-  it('exits 4 and writes nothing when Graph does not report the download right', async () => {
-    vi.mocked(getRecordingInfo).mockResolvedValue(ok({ ...info(false), blocksDownload: null }));
+  it('downloads when Graph does not report the download right', async () => {
+    vi.mocked(getRecordingInfo).mockResolvedValue(ok(info(null)));
+    vi.mocked(downloadFile).mockResolvedValue(ok({ name: 'r.mp4', outputPath: '/tmp/x/r.mp4', size: 10, contentType: 'video/mp4', sha256: 'h' }));
     const { code } = await runMeetingCommand(['recording', URL_, '--out', '/tmp/x']);
-    expect(code).toBe(4);
-    expect(downloadFile).not.toHaveBeenCalled();
+    expect(code).toBe(0);
+    expect(downloadFile).toHaveBeenCalled();
   });
 });
 

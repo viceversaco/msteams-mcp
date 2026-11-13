@@ -6,8 +6,8 @@
  *
  * Output is one JSON object: `{ ok: true, ... }` or `{ ok: false, error, ... }`.
  * transcript is getTranscriptContent's value without formattedText. recording
- * prints Graph metadata and, with --out, downloads into DIR only when the owner
- * allows it. Exit codes: 0 ok, 1 API error, 2 usage, 3 no .mp4 in the meeting
+ * prints Graph metadata and, with --out, downloads into DIR unless the owner
+ * blocks it. Exit codes: 0 ok, 1 API error, 2 usage, 3 no .mp4 in the meeting
  * chat, 4 the owner blocks download (nothing written).
  */
 
@@ -51,9 +51,6 @@ async function recording(target: string, opts: { date?: string; info: boolean; o
   const info = await getRecordingInfo(url, located);
   if (!info.ok) throw new Fail(1, info.error.message, { code: info.error.code, url });
   if (opts.info) return { ...info.value };
-  if (info.value.blocksDownload === null) {
-    throw new Fail(4, 'Graph did not report whether you may download this recording, so it was not downloaded.', { ...info.value });
-  }
   if (info.value.blocksDownload) {
     throw new Fail(4, 'The owner has blocked downloading this recording for you (view-only). Ask the owner to allow download, or download it by hand in the browser.', { ...info.value });
   }
